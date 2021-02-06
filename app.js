@@ -13,6 +13,33 @@ const app = express();
 
 app.use(bodyParser.json());
 
+const events = (eventIds) => {
+    return Event.find({_id: {$in: eventIds}})
+        .then(events => {
+            return events.map(event => {
+                return {
+                    ...event._doc,
+                    _id: event.id,
+                    creator: user.bind(this, event.creator)}
+            });
+        }).catch(error => {
+            throw error;
+        });
+}
+
+const user = (userId) => {
+    return User.findById(userId)
+        .then(user => {
+            return {
+                ...user._doc,
+                _id: user.id,
+                createdEvents: events.bind(this, user._doc.createdEvents)
+            }
+        }).catch(error => {
+            throw error;
+        })
+}
+
 app.use('/graphql', graphqlHTTP({
     schema: buildSchema(`
         type Event {
@@ -21,12 +48,14 @@ app.use('/graphql', graphqlHTTP({
             description: String!
             price: Float!
             date: String!
+            creator: User!
         }
         
         type User {
             _id: ID!
             email: String!
-            password: String
+            password: String,
+            createdEvents: [Event!]
         }
         
         input EventInput {
@@ -60,7 +89,11 @@ app.use('/graphql', graphqlHTTP({
             return Event.find()
                 .then(events => {
                    return events.map(event => {
-                       return {...event._doc, _id: event.id}
+                       return {
+                           ...event._doc,
+                           _id: event.id,
+                           creator: user.bind(this, event._doc.creator)
+                       }
                    })
                 })
                 .catch(error => {
@@ -73,13 +106,12 @@ app.use('/graphql', graphqlHTTP({
                 description: args.eventInput.description,
                 price: +args.eventInput.price,
                 date: new Date(args.eventInput.date),
-                creator: '601f1dafc08e8a3ac1f9da37'
+                creator: '601f238c6d60563e6536821d'
             });
             let createdEvent = null;
             return event.save().then(result => {
-                createdEvent = {...result._doc, _id: result.id};
-                return User.findById('601f1dafc08e8a3ac1f9da37');
-                // return {...result._doc, _id: result.id};
+                createdEvent = {...result._doc, _id: result.id, creator: user.bind(this, result._doc.creator)};
+                return User.findById('601f238c6d60563e6536821d');
             }).then(user => {
                 if (user) {
                     user.createdEvents.push(event);
