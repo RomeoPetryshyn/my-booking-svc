@@ -2,14 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { graphqlHTTP } = require('express-graphql');
 const {buildSchema} = require('graphql');
+const mongoose = require('mongoose');
+const {MONGO_DB_NAME, MONGO_PASSWORD} = require('./config.json');
+
+const Event = require('./models/event');
 
 const app = express();
 
-const events = [];
-
 app.use(bodyParser.json());
-
-app.listen(3000);
 
 app.use('/graphql', graphqlHTTP({
     schema: buildSchema(`
@@ -43,19 +43,37 @@ app.use('/graphql', graphqlHTTP({
     `),
     rootValue: {
         events: () => {
-            return events;
+            return Event.find()
+                .then(events => {
+                   return events.map(event => {
+                       return {...event._doc, _id: event.id}
+                   })
+                })
+                .catch(error => {
+                    throw error
+                });
         },
         createEvent: (args) => {
-            const event = {
-                _id: Math.random().toString(),
+            const event = new Event({
                 title: args.eventInput.title,
                 description: args.eventInput.description,
                 price: +args.eventInput.price,
-                date: new Date().toISOString()
-            }
-            events.push(event);
-            return event;
+                date: new Date(args.eventInput.date)
+            });
+            return event.save().then(result => {
+                return {...result._doc, _id: result.id};
+            }).catch(error => {
+                throw error;
+            });
         }
     },
     graphiql: true
 }));
+
+mongoose.connect(`mongodb+srv://mongo-db-admin-1:${MONGO_PASSWORD}@cluster0.nhvzi.mongodb.net/${MONGO_DB_NAME}?retryWrites=true&w=majority`)
+    .then(() => {
+        app.listen(3000);
+    })
+    .catch((error) => {
+        console.error(error);
+    });

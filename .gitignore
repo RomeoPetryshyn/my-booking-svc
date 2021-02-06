@@ -6,4 +6,5 @@
 .vimrc
 *.log
 *.iml
+config.json
 /.cache/*
