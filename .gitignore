@@ -1,0 +1,9 @@
+/node_modules/*
+.DS_Store
+/target/*
+/coverage/*
+.idea
+.vimrc
+*.log
+*.iml
+/.cache/*
