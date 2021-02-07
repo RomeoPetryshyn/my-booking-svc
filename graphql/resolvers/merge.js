@@ -7,7 +7,7 @@ const singleEvent = async (eventId) => {
         const event = await Event.findById(eventId);
         return transformEvent(event);
     } catch (error) {
-
+        throw error;
     }
 }
 
